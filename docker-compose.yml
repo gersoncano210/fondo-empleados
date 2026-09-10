@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: fondo_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fondo_user
+      POSTGRES_PASSWORD: fondo_dev_2026
+      POSTGRES_DB: fondo_empleados
+    ports:
+      - "5433:5432"
+    volumes:
+      - fondo_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fondo_user -d fondo_empleados"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fondo_pgdata:

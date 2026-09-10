@@ -1,0 +1,678 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMERACIONES
+// ============================================================
+
+enum TipoDocumento {
+  CC
+  CE
+  PASAPORTE
+}
+
+enum Cargo {
+  ADMINISTRADOR
+  GERENTE
+  ASESOR
+  CAJERO
+  RRHH
+  REVISOR_FISCAL
+}
+
+enum EstadoEmpleado {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoAsociado {
+  ACTIVO
+  RETIRADO
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  BLOQUEADO
+  INACTIVO
+}
+
+enum EstadoGenerico {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoCaja {
+  ABIERTA
+  CERRADA
+  CUADRADA
+  DESCUADRADA
+}
+
+enum FamiliaCuenta {
+  ACTIVO
+  PASIVO
+  PATRIMONIO
+  INGRESO
+  GASTO
+}
+
+enum TipoCuenta {
+  APORTES_SOCIALES
+  AHORRO_VOLUNTARIO
+}
+
+enum EstadoCuenta {
+  ACTIVA
+  BLOQUEADA
+  CERRADA
+}
+
+enum TipoTransaccion {
+  AFILIACION
+  APORTE_ANUAL
+  DEPOSITO_VENTANILLA
+  RETIRO_VENTANILLA
+  TRANSFERENCIA
+  PAGO_SIMULADO
+  DESEMBOLSO_CREDITO
+  PAGO_CUOTA
+  CAUSACION_MORA
+  ABONO_INTERESES
+  RETIRO_CAJERO
+  DEVOLUCION_APORTES
+  REVERSO
+}
+
+enum DestinoCredito {
+  LIBRE_INVERSION
+  EDUCACION
+  VIVIENDA
+  SALUD
+  OTRO
+}
+
+enum Veredicto {
+  RECOMENDADO
+  REQUIERE_REVISION
+  NO_CUMPLE
+}
+
+enum NivelAprobacion {
+  ASESOR
+  GERENTE
+  ADMINISTRADOR
+  REVISOR_FISCAL
+}
+
+enum EstadoSolicitud {
+  RADICADA
+  EN_APROBACION
+  APROBADA
+  RECHAZADA
+  DESEMBOLSADA
+  ANULADA
+}
+
+enum Decision {
+  APROBADA
+  RECHAZADA
+  DEVUELTA
+}
+
+enum EstadoCredito {
+  VIGENTE
+  EN_MORA
+  CANCELADO
+  CASTIGADO
+}
+
+enum EstadoCuota {
+  PENDIENTE
+  PAGADA
+  PAGADA_PARCIAL
+  EN_MORA
+}
+
+enum EstadoTarjeta {
+  ACTIVA
+  BLOQUEADA
+  VENCIDA
+  CANCELADA
+}
+
+enum AccionAuditoria {
+  CREAR
+  ACTUALIZAR
+  APROBAR
+  RECHAZAR
+  CONSULTAR_SENSIBLE
+  BLOQUEAR
+  REVERSAR
+}
+
+enum TipoNotificacion {
+  CREDITO_APROBADO
+  CREDITO_RECHAZADO
+  SOLICITUD_PENDIENTE
+  CUOTA_POR_VENCER
+  CUOTA_EN_MORA
+  RETIRO_AUTORIZADO
+  INTERESES_ABONADOS
+}
+
+enum TipoParametro {
+  ENTERO
+  DECIMAL
+  MONTO
+  PORCENTAJE
+  BOOLEANO
+  TEXTO
+  HORA
+}
+
+enum ModoReloj {
+  REAL
+  SIMULADO
+}
+
+
+// ============================================================
+// PERSONAS
+// ============================================================
+
+model Persona {
+  id                          String        @id @default(uuid())
+  tipoDocumento               TipoDocumento
+  numeroDocumento             String        @unique
+  nombres                     String
+  apellidos                   String
+  fechaNacimiento             DateTime?     @db.Date
+  direccion                   String?
+  telefono                    String?
+  correoPersonal              String?
+  contactoEmergenciaNombre    String?
+  contactoEmergenciaTelefono  String?
+  creadoEn                    DateTime      @default(now())
+  actualizadoEn               DateTime      @updatedAt
+
+  empleado Empleado?
+  asociado Asociado?
+  usuario  Usuario?
+
+  @@index([numeroDocumento])
+}
+
+model Empleado {
+  id                String         @id @default(uuid())
+  personaId         String         @unique
+  codigoEmpleado    String         @unique
+  cargo             Cargo
+  sucursalId        String
+  jefeId            String?
+  fechaIngreso      DateTime       @db.Date
+  fechaRetiro       DateTime?      @db.Date
+  correoCorporativo String?        @unique
+  salarioFondo      BigInt
+  estado            EstadoEmpleado @default(ACTIVO)
+
+  persona   Persona    @relation(fields: [personaId], references: [id])
+  sucursal  Sucursal   @relation(fields: [sucursalId], references: [id])
+  jefe      Empleado?  @relation("Jerarquia", fields: [jefeId], references: [id])
+  aCargo    Empleado[] @relation("Jerarquia")
+
+  asociadosAsignados Asociado[] @relation("AsesorAsignado")
+  cajas              Caja[]
+
+  @@index([sucursalId])
+  @@index([cargo])
+}
+
+model Asociado {
+  id                 String         @id @default(uuid())
+  personaId          String         @unique
+  numeroAsociado     String         @unique
+  sucursalId         String
+  asesorAsignadoId   String?
+  fechaAfiliacion    DateTime       @db.Date
+  fechaDesafiliacion DateTime?      @db.Date
+  cargoEmpresa       String?
+  estado             EstadoAsociado @default(ACTIVO)
+
+  persona        Persona   @relation(fields: [personaId], references: [id])
+  sucursal       Sucursal  @relation(fields: [sucursalId], references: [id])
+  asesorAsignado Empleado? @relation("AsesorAsignado", fields: [asesorAsignadoId], references: [id])
+
+  cuentas    Cuenta[]
+  salarios   SalarioAsociado[]
+  solicitudes SolicitudCredito[]
+  creditos   Credito[]
+
+  @@index([sucursalId])
+  @@index([estado])
+}
+
+model SalarioAsociado {
+  id              String   @id @default(uuid())
+  asociadoId      String
+  valor           BigInt
+  fechaVigencia   DateTime @db.Date
+  registradoPorId String
+  soporte         String?
+  creadoEn        DateTime @default(now())
+
+  asociado      Asociado @relation(fields: [asociadoId], references: [id])
+  registradoPor Usuario  @relation(fields: [registradoPorId], references: [id])
+
+  @@index([asociadoId, fechaVigencia])
+}
+
+model Usuario {
+  id               String        @id @default(uuid())
+  personaId        String        @unique
+  correoAcceso     String        @unique
+  hashContrasena   String
+  estado           EstadoUsuario @default(ACTIVO)
+  intentosFallidos Int           @default(0)
+  bloqueadoHasta   DateTime?
+  ultimoAcceso     DateTime?
+  creadoEn         DateTime      @default(now())
+
+  persona Persona @relation(fields: [personaId], references: [id])
+
+  roles              UsuarioRol[]
+  salariosRegistrados SalarioAsociado[]
+  transaccionesCreadas Transaccion[]
+  solicitudesRadicadas SolicitudCredito[]
+  aprobaciones       AprobacionCredito[]
+  auditoria          BitacoraAuditoria[]
+  notificaciones     Notificacion[]
+  parametrosActualizados Parametro[]
+  relojActualizado   RelojSistema[]
+}
+
+
+// ============================================================
+// ORGANIZACION
+// ============================================================
+
+model Sucursal {
+  id        String         @id @default(uuid())
+  nombre    String         @unique
+  ciudad    String
+  direccion String?
+  estado    EstadoGenerico @default(ACTIVO)
+  creadoEn  DateTime       @default(now())
+
+  empleados    Empleado[]
+  asociados    Asociado[]
+  cajas        Caja[]
+  planCuentas  PlanCuentas[]
+  transacciones Transaccion[]
+  auditoria    BitacoraAuditoria[]
+}
+
+model Caja {
+  id                String     @id @default(uuid())
+  sucursalId        String
+  cajeroId          String
+  fechaApertura     DateTime
+  fechaCierre       DateTime?
+  saldoInicial      BigInt     @default(0)
+  saldoFinalContado BigInt?
+  saldoFinalSistema BigInt?
+  diferencia        BigInt?
+  estado            EstadoCaja @default(ABIERTA)
+
+  sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+  cajero   Empleado @relation(fields: [cajeroId], references: [id])
+
+  transacciones Transaccion[]
+
+  @@index([sucursalId, estado])
+  @@index([cajeroId])
+}
+
+
+// ============================================================
+// CONTABILIDAD
+// ============================================================
+
+model PlanCuentas {
+  id         String         @id @default(uuid())
+  codigo     String         @unique
+  nombre     String
+  familia    FamiliaCuenta
+  sucursalId String?
+  estado     EstadoGenerico @default(ACTIVO)
+
+  sucursal Sucursal? @relation(fields: [sucursalId], references: [id])
+
+  asientos   Asiento[]
+  saldoCache SaldoCachePlan?
+
+  @@index([familia])
+  @@index([sucursalId])
+}
+
+model Cuenta {
+  id            String       @id @default(uuid())
+  asociadoId    String
+  tipo          TipoCuenta
+  numero        String       @unique
+  estado        EstadoCuenta @default(ACTIVA)
+  fechaApertura DateTime     @db.Date
+  fechaCierre   DateTime?    @db.Date
+
+  asociado Asociado @relation(fields: [asociadoId], references: [id])
+
+  asientos   Asiento[]
+  tarjetas   Tarjeta[]
+  saldoCache SaldoCache?
+
+  @@unique([asociadoId, tipo])
+  @@index([estado])
+}
+
+model Transaccion {
+  id                String          @id @default(uuid())
+  fecha             DateTime
+  tipo              TipoTransaccion
+  descripcion       String?
+  creadoPorId       String
+  sucursalId        String?
+  cajaId            String?
+  claveIdempotencia String          @unique
+  reversaDeId       String?         @unique
+  creadoEn          DateTime        @default(now())
+
+  creadoPor Usuario      @relation(fields: [creadoPorId], references: [id])
+  sucursal  Sucursal?    @relation(fields: [sucursalId], references: [id])
+  caja      Caja?        @relation(fields: [cajaId], references: [id])
+  reversaDe Transaccion? @relation("Reverso", fields: [reversaDeId], references: [id])
+  reversadaPor Transaccion? @relation("Reverso")
+
+  asientos      Asiento[]
+  moras         Mora[]
+  retiroCajero  RetiroCajero?
+
+  @@index([fecha])
+  @@index([tipo])
+  @@index([cajaId])
+}
+
+model Asiento {
+  id            String  @id @default(uuid())
+  transaccionId String
+  cuentaId      String?
+  planCuentaId  String?
+  monto         BigInt
+  orden         Int
+
+  transaccion Transaccion  @relation(fields: [transaccionId], references: [id])
+  cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
+  planCuenta  PlanCuentas? @relation(fields: [planCuentaId], references: [id])
+
+  @@index([transaccionId])
+  @@index([cuentaId])
+  @@index([planCuentaId])
+}
+
+model SaldoCache {
+  cuentaId      String   @id
+  saldo         BigInt   @default(0)
+  actualizadoEn DateTime @updatedAt
+
+  cuenta Cuenta @relation(fields: [cuentaId], references: [id])
+}
+
+model SaldoCachePlan {
+  planCuentaId  String   @id
+  saldo         BigInt   @default(0)
+  actualizadoEn DateTime @updatedAt
+
+  planCuenta PlanCuentas @relation(fields: [planCuentaId], references: [id])
+}
+
+
+// ============================================================
+// CREDITOS
+// ============================================================
+
+model SolicitudCredito {
+  id                String          @id @default(uuid())
+  asociadoId        String
+  montoSolicitado   BigInt
+  plazoMeses        Int
+  destino           DestinoCredito
+  puntaje           Int?
+  veredictoSistema  Veredicto?
+  detalleEvaluacion Json?
+  cupoDisponible    BigInt?
+  capacidadPago     BigInt?
+  nivelRequerido    NivelAprobacion
+  estado            EstadoSolicitud @default(RADICADA)
+  radicadaPorId     String
+  fechaRadicacion   DateTime        @default(now())
+
+  asociado   Asociado @relation(fields: [asociadoId], references: [id])
+  radicadaPor Usuario @relation(fields: [radicadaPorId], references: [id])
+
+  aprobaciones AprobacionCredito[]
+  credito      Credito?
+
+  @@index([asociadoId])
+  @@index([estado, nivelRequerido])
+}
+
+model AprobacionCredito {
+  id            String          @id @default(uuid())
+  solicitudId   String
+  nivel         NivelAprobacion
+  decididoPorId String
+  decision      Decision
+  comentario    String?
+  fecha         DateTime        @default(now())
+
+  solicitud  SolicitudCredito @relation(fields: [solicitudId], references: [id])
+  decididoPor Usuario         @relation(fields: [decididoPorId], references: [id])
+
+  @@index([solicitudId])
+}
+
+model Credito {
+  id                String        @id @default(uuid())
+  solicitudId       String        @unique
+  asociadoId        String
+  montoDesembolsado BigInt
+  tasaMensual       Decimal       @db.Decimal(6, 4)
+  plazoMeses        Int
+  fechaDesembolso   DateTime      @db.Date
+  saldoCapital      BigInt
+  estado            EstadoCredito @default(VIGENTE)
+
+  solicitud SolicitudCredito @relation(fields: [solicitudId], references: [id])
+  asociado  Asociado         @relation(fields: [asociadoId], references: [id])
+
+  cuotas Cuota[]
+
+  @@index([asociadoId, estado])
+  @@index([estado])
+}
+
+model Cuota {
+  id                  String      @id @default(uuid())
+  creditoId           String
+  numero              Int
+  fechaVencimiento    DateTime    @db.Date
+  capital             BigInt
+  interes             BigInt
+  total               BigInt
+  saldoCapitalDespues BigInt
+  estado              EstadoCuota @default(PENDIENTE)
+  fechaPago           DateTime?   @db.Date
+  montoPagado         BigInt      @default(0)
+
+  credito Credito @relation(fields: [creditoId], references: [id])
+  moras   Mora[]
+
+  @@unique([creditoId, numero])
+  @@index([fechaVencimiento, estado])
+}
+
+model Mora {
+  id               String   @id @default(uuid())
+  cuotaId          String
+  diasMora         Int
+  saldoVencido     BigInt
+  interesMoratorio BigInt
+  transaccionId    String?
+  calculadoEn      DateTime @default(now())
+
+  cuota       Cuota        @relation(fields: [cuotaId], references: [id])
+  transaccion Transaccion? @relation(fields: [transaccionId], references: [id])
+
+  @@index([cuotaId])
+}
+
+// ============================================================
+// TARJETAS
+// ============================================================
+
+model Tarjeta {
+  id                String        @id @default(uuid())
+  cuentaId          String
+  numeroEnmascarado String
+  hashNumero        String        @unique
+  fechaVencimiento  DateTime      @db.Date
+  estado            EstadoTarjeta @default(ACTIVA)
+  limiteDiario      BigInt
+  creadoEn          DateTime      @default(now())
+
+  cuenta Cuenta @relation(fields: [cuentaId], references: [id])
+
+  retiros RetiroCajero[]
+
+  @@index([cuentaId])
+}
+
+model RetiroCajero {
+  id            String   @id @default(uuid())
+  tarjetaId     String
+  transaccionId String   @unique
+  monto         BigInt
+  fecha         DateTime @default(now())
+
+  tarjeta     Tarjeta     @relation(fields: [tarjetaId], references: [id])
+  transaccion Transaccion @relation(fields: [transaccionId], references: [id])
+
+  @@index([tarjetaId, fecha])
+}
+
+// ============================================================
+// PERMISOS
+// ============================================================
+
+model Rol {
+  id          String  @id @default(uuid())
+  nombre      String  @unique
+  descripcion String?
+
+  permisos RolPermiso[]
+  usuarios UsuarioRol[]
+}
+
+model Permiso {
+  id          String  @id @default(uuid())
+  clave       String  @unique
+  descripcion String?
+
+  roles RolPermiso[]
+}
+
+model RolPermiso {
+  rolId     String
+  permisoId String
+
+  rol     Rol     @relation(fields: [rolId], references: [id])
+  permiso Permiso @relation(fields: [permisoId], references: [id])
+
+  @@id([rolId, permisoId])
+}
+
+model UsuarioRol {
+  usuarioId String
+  rolId     String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  rol     Rol     @relation(fields: [rolId], references: [id])
+
+  @@id([usuarioId, rolId])
+}
+
+// ============================================================
+// TRANSVERSAL
+// ============================================================
+
+model BitacoraAuditoria {
+  id             String          @id @default(uuid())
+  fecha          DateTime        @default(now())
+  actorUsuarioId String?
+  actorRol       String?
+  accion         AccionAuditoria
+  entidad        String
+  entidadId      String?
+  datosAntes     Json?
+  datosDespues   Json?
+  ip             String?
+  sucursalId     String?
+  hashAnterior   String?
+  hashPropio     String          @unique
+
+  actorUsuario Usuario?  @relation(fields: [actorUsuarioId], references: [id])
+  sucursal     Sucursal? @relation(fields: [sucursalId], references: [id])
+
+  @@index([fecha])
+  @@index([entidad, entidadId])
+  @@index([actorUsuarioId])
+}
+
+model Notificacion {
+  id        String           @id @default(uuid())
+  usuarioId String
+  tipo      TipoNotificacion
+  titulo    String
+  mensaje   String
+  enlace    String?
+  leida     Boolean          @default(false)
+  fecha     DateTime         @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, leida])
+}
+
+model Parametro {
+  clave            String        @id
+  valor            String
+  tipo             TipoParametro
+  descripcion      String?
+  actualizadoPorId String?
+  actualizadoEn    DateTime      @updatedAt
+
+  actualizadoPor Usuario? @relation(fields: [actualizadoPorId], references: [id])
+}
+
+model RelojSistema {
+  id               Int       @id @default(1)
+  modo             ModoReloj @default(REAL)
+  fechaSimulada    DateTime?
+  actualizadoPorId String?
+  actualizadoEn    DateTime  @updatedAt
+
+  actualizadoPor Usuario? @relation(fields: [actualizadoPorId], references: [id])
+}

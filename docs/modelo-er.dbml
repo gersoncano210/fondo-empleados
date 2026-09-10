@@ -1,0 +1,308 @@
+// ============================================================
+// FONDO DE EMPLEADOS — Modelo de datos
+// ============================================================
+
+// ---------- PERSONAS ----------
+
+Table Persona {
+  id                        uuid [pk]
+  tipoDocumento             enum_tipo_documento
+  numeroDocumento           varchar [unique, not null]
+  nombres                   varchar [not null]
+  apellidos                 varchar [not null]
+  fechaNacimiento           date
+  direccion                 varchar
+  telefono                  varchar
+  correoPersonal            varchar
+  contactoEmergenciaNombre  varchar
+  contactoEmergenciaTelefono varchar
+  creadoEn                  timestamp
+  actualizadoEn             timestamp
+}
+
+Table Empleado {
+  id                uuid [pk]
+  personaId         uuid [ref: - Persona.id, unique]
+  codigoEmpleado    varchar [unique, not null]
+  cargo             enum_cargo
+  sucursalId        uuid [ref: > Sucursal.id]
+  jefeId            uuid [ref: > Empleado.id, note: 'jerarquia']
+  fechaIngreso      date [not null]
+  fechaRetiro       date
+  correoCorporativo varchar [unique]
+  salarioFondo      bigint [note: 'centavos']
+  estado            enum_estado_empleado
+}
+
+Table Asociado {
+  id                 uuid [pk]
+  personaId          uuid [ref: - Persona.id, unique]
+  numeroAsociado     varchar [unique, not null]
+  sucursalId         uuid [ref: > Sucursal.id]
+  asesorAsignadoId   uuid [ref: > Empleado.id]
+  fechaAfiliacion    date [not null]
+  fechaDesafiliacion date
+  cargoEmpresa       varchar
+  estado             enum_estado_asociado
+}
+
+Table SalarioAsociado {
+  id              uuid [pk]
+  asociadoId      uuid [ref: > Asociado.id]
+  valor           bigint [note: 'centavos']
+  fechaVigencia   date [not null]
+  registradoPorId uuid [ref: > Usuario.id]
+  soporte         varchar
+  creadoEn        timestamp
+}
+
+Table Usuario {
+  id               uuid [pk]
+  personaId        uuid [ref: - Persona.id, unique]
+  correoAcceso     varchar [unique, not null]
+  hashContrasena   varchar [not null]
+  estado           enum_estado_usuario
+  intentosFallidos int
+  bloqueadoHasta   timestamp
+  ultimoAcceso     timestamp
+}
+
+// ---------- PERMISOS ----------
+
+Table Rol {
+  id          uuid [pk]
+  nombre      varchar [unique, not null]
+  descripcion varchar
+}
+
+Table Permiso {
+  id          uuid [pk]
+  clave       varchar [unique, not null, note: 'credito.aprobar.nivel1']
+  descripcion varchar
+}
+
+Table RolPermiso {
+  rolId     uuid [ref: > Rol.id]
+  permisoId uuid [ref: > Permiso.id]
+
+  indexes { (rolId, permisoId) [pk] }
+}
+
+Table UsuarioRol {
+  usuarioId uuid [ref: > Usuario.id]
+  rolId     uuid [ref: > Rol.id]
+
+  indexes { (usuarioId, rolId) [pk] }
+}
+
+// ---------- ORGANIZACION ----------
+
+Table Sucursal {
+  id        uuid [pk]
+  nombre    varchar [unique, not null]
+  ciudad    varchar
+  direccion varchar
+  estado    enum_estado_generico
+}
+
+Table Caja {
+  id                 uuid [pk]
+  sucursalId         uuid [ref: > Sucursal.id]
+  cajeroId           uuid [ref: > Empleado.id]
+  fechaApertura      timestamp [not null]
+  fechaCierre        timestamp
+  saldoInicial       bigint
+  saldoFinalContado  bigint
+  saldoFinalSistema  bigint
+  diferencia         bigint
+  estado             enum_estado_caja
+}
+
+// ---------- CONTABILIDAD ----------
+
+Table PlanCuentas {
+  id         uuid [pk]
+  codigo     varchar [unique, not null]
+  nombre     varchar [not null]
+  familia    enum_familia_cuenta
+  sucursalId uuid [ref: > Sucursal.id, note: 'nulo = global']
+  estado     enum_estado_generico
+}
+
+Table Cuenta {
+  id            uuid [pk]
+  asociadoId    uuid [ref: > Asociado.id]
+  tipo          enum_tipo_cuenta
+  numero        varchar [unique, not null]
+  estado        enum_estado_cuenta
+  fechaApertura date
+  fechaCierre   date
+
+  indexes { (asociadoId, tipo) [unique] }
+}
+
+Table Transaccion {
+  id                uuid [pk]
+  fecha             timestamp [not null, note: 'del reloj del sistema']
+  tipo              enum_tipo_transaccion
+  descripcion       varchar
+  creadoPorId       uuid [ref: > Usuario.id]
+  sucursalId        uuid [ref: > Sucursal.id]
+  cajaId            uuid [ref: > Caja.id]
+  claveIdempotencia varchar [unique, not null]
+  reversaDeId       uuid [ref: > Transaccion.id]
+}
+
+Table Asiento {
+  id            uuid [pk]
+  transaccionId uuid [ref: > Transaccion.id]
+  cuentaId      uuid [ref: > Cuenta.id, note: 'excluyente con planCuentaId']
+  planCuentaId  uuid [ref: > PlanCuentas.id]
+  monto         bigint [not null, note: 'centavos, con signo. Suma por transaccion = 0']
+  orden         int
+}
+
+Table SaldoCache {
+  cuentaId      uuid [pk, ref: - Cuenta.id]
+  saldo         bigint [not null]
+  actualizadoEn timestamp
+}
+
+Table SaldoCachePlan {
+  planCuentaId  uuid [pk, ref: - PlanCuentas.id]
+  saldo         bigint [not null]
+  actualizadoEn timestamp
+}
+
+// ---------- CREDITOS ----------
+
+Table SolicitudCredito {
+  id                uuid [pk]
+  asociadoId        uuid [ref: > Asociado.id]
+  montoSolicitado   bigint [not null]
+  plazoMeses        int [not null]
+  destino           enum_destino_credito
+  puntaje           int
+  veredictoSistema  enum_veredicto
+  detalleEvaluacion json [note: 'foto congelada de las cifras']
+  cupoDisponible    bigint
+  capacidadPago     bigint
+  nivelRequerido    enum_nivel_aprobacion
+  estado            enum_estado_solicitud
+  radicadaPorId     uuid [ref: > Usuario.id]
+  fechaRadicacion   timestamp
+}
+
+Table AprobacionCredito {
+  id           uuid [pk]
+  solicitudId  uuid [ref: > SolicitudCredito.id]
+  nivel        enum_nivel_aprobacion
+  decididoPorId uuid [ref: > Usuario.id]
+  decision     enum_decision
+  comentario   varchar
+  fecha        timestamp
+}
+
+Table Credito {
+  id                uuid [pk]
+  solicitudId       uuid [ref: - SolicitudCredito.id, unique]
+  asociadoId        uuid [ref: > Asociado.id]
+  montoDesembolsado bigint [not null]
+  tasaMensual       decimal [note: 'congelada al desembolsar']
+  plazoMeses        int
+  fechaDesembolso   date
+  saldoCapital      bigint
+  estado            enum_estado_credito
+}
+
+Table Cuota {
+  id                  uuid [pk]
+  creditoId           uuid [ref: > Credito.id]
+  numero              int [not null]
+  fechaVencimiento    date [not null, note: 'siempre dia 5']
+  capital             bigint
+  interes             bigint
+  total               bigint
+  saldoCapitalDespues bigint
+  estado              enum_estado_cuota
+  fechaPago           date
+  montoPagado         bigint
+
+  indexes { (creditoId, numero) [unique] }
+}
+
+Table Mora {
+  id               uuid [pk]
+  cuotaId          uuid [ref: > Cuota.id]
+  diasMora         int
+  saldoVencido     bigint
+  interesMoratorio bigint
+  transaccionId    uuid [ref: > Transaccion.id]
+  calculadoEn      timestamp
+}
+
+// ---------- TARJETAS ----------
+
+Table Tarjeta {
+  id                uuid [pk]
+  cuentaId          uuid [ref: > Cuenta.id]
+  numeroEnmascarado varchar
+  hashNumero        varchar [unique]
+  fechaVencimiento  date
+  estado            enum_estado_tarjeta
+  limiteDiario      bigint
+}
+
+Table RetiroCajero {
+  id            uuid [pk]
+  tarjetaId     uuid [ref: > Tarjeta.id]
+  transaccionId uuid [ref: - Transaccion.id]
+  monto         bigint
+  fecha         timestamp
+}
+
+// ---------- TRANSVERSAL ----------
+
+Table BitacoraAuditoria {
+  id             uuid [pk]
+  fecha          timestamp [not null]
+  actorUsuarioId uuid [ref: > Usuario.id]
+  actorRol       varchar [note: 'congelado, no consultado']
+  accion         enum_accion_auditoria
+  entidad        varchar
+  entidadId      uuid
+  datosAntes     json
+  datosDespues   json
+  ip             varchar
+  sucursalId     uuid [ref: > Sucursal.id]
+  hashAnterior   varchar
+  hashPropio     varchar [unique]
+}
+
+Table Notificacion {
+  id        uuid [pk]
+  usuarioId uuid [ref: > Usuario.id]
+  tipo      enum_tipo_notificacion
+  titulo    varchar
+  mensaje   varchar
+  enlace    varchar
+  leida     boolean
+  fecha     timestamp
+}
+
+Table Parametro {
+  clave            varchar [pk]
+  valor            varchar [not null]
+  tipo             enum_tipo_parametro
+  descripcion      varchar
+  actualizadoPorId uuid [ref: > Usuario.id]
+  actualizadoEn    timestamp
+}
+
+Table RelojSistema {
+  id               int [pk, note: 'siempre 1']
+  modo             enum_modo_reloj
+  fechaSimulada    timestamp
+  actualizadoPorId uuid [ref: > Usuario.id]
+  actualizadoEn    timestamp
+}

@@ -7,7 +7,7 @@ import {
   TransaccionDuplicada,
 } from '../../comun/errores.js';
 import type { DatosTransaccion, LineaAsiento } from './contabilidad.tipos.js';
-
+import { ahora } from '../../comun/reloj.js';
 /**
  * Registra un movimiento de dinero en el libro contable.
  *
@@ -28,7 +28,7 @@ export async function registrarTransaccion(datos: DatosTransaccion) {
         sucursalId: datos.sucursalId,
         cajaId: datos.cajaId,
         claveIdempotencia: datos.claveIdempotencia,
-        fecha: datos.fecha ?? new Date(),
+        fecha: datos.fecha ?? (await ahora()),
       },
     });
 

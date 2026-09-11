@@ -1,11 +1,20 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { rutasAuth } from './modulos/auth/auth.rutas.js';
+import { manejadorDeErrores } from './comun/manejador-errores.js';
 
 export const crearApp = () => {
   const app = express();
 
-  app.use(cors({ origin: true, credentials: true }));
+  app.use(
+    cors({
+      origin: ['http://localhost:4200', 'http://localhost:4300'],
+      credentials: true, // permite enviar cookies
+    }),
+  );
   app.use(express.json());
+  app.use(cookieParser());
 
   app.get('/api/salud', (_req, res) => {
     res.json({
@@ -14,6 +23,11 @@ export const crearApp = () => {
       fecha: new Date().toISOString(),
     });
   });
+
+  app.use('/api/auth', rutasAuth);
+
+  // Debe ir al final, después de todas las rutas
+  app.use(manejadorDeErrores);
 
   return app;
 };

@@ -294,6 +294,7 @@ model Usuario {
   notificaciones     Notificacion[]
   parametrosActualizados Parametro[]
   relojActualizado   RelojSistema[]
+  tokensRefresco         TokenRefresco[]
 }
 
 
@@ -676,4 +677,20 @@ model RelojSistema {
   actualizadoEn    DateTime  @updatedAt
 
   actualizadoPor Usuario? @relation(fields: [actualizadoPorId], references: [id])
+}
+
+
+model TokenRefresco {
+  id         String    @id @default(uuid())
+  usuarioId  String
+  hashToken  String    @unique
+  expiraEn   DateTime
+  revocadoEn DateTime?
+  creadoEn   DateTime  @default(now())
+  ip         String?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([expiraEn])
 }

@@ -1,5 +1,3 @@
-/*
- * Public API Surface of shared
- */
-
-export * from './lib/shared';
+export * from './lib/modelos/usuario.modelo';
+export * from './lib/modelos/asociado.modelo';
+export * from './lib/utilidades/dinero';

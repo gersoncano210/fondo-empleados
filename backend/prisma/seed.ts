@@ -118,6 +118,7 @@ async function sembrarPlanCuentas() {
     { codigo: '4210', nombre: 'Ingresos por intereses de crédito', familia: 'INGRESO' },
     { codigo: '4215', nombre: 'Ingresos por intereses de mora',    familia: 'INGRESO' },
     { codigo: '5305', nombre: 'Gastos por intereses sobre ahorros', familia: 'GASTO' },
+    { codigo: '1110', nombre: 'Bancos',                             familia: 'ACTIVO' },
   ] as const;
 
   for (const c of globales) {

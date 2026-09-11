@@ -5,6 +5,7 @@ import { rutasAuth } from './modulos/auth/auth.rutas.js';
 import { manejadorDeErrores } from './comun/manejador-errores.js';
 import { rutasAsociados } from './modulos/asociados/asociados.rutas.js';
 import { rutasCaja } from './modulos/caja/caja.rutas.js';
+import { rutasTransferencias } from './modulos/transferencias/transferencias.rutas.js';
 
 export const crearApp = () => {
   const app = express();
@@ -30,7 +31,7 @@ export const crearApp = () => {
   app.use('/api/auth', rutasAuth);
   app.use('/api/asociados', rutasAsociados);
   app.use('/api/caja', rutasCaja);
-
+  app.use('/api/transferencias', rutasTransferencias);
   
   // Debe ir al final, después de todas las rutas
   app.use(manejadorDeErrores);

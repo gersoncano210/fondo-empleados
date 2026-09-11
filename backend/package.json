@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/servidor.ts",
     "build": "tsc",
-    "start": "node dist/servidor.js"
+    "start": "node dist/servidor.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +30,7 @@
     "@types/pg": "^8.23.1",
     "prisma": "^7.10.0",
     "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   }
 }

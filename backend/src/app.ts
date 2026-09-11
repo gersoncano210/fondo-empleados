@@ -3,6 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { rutasAuth } from './modulos/auth/auth.rutas.js';
 import { manejadorDeErrores } from './comun/manejador-errores.js';
+import { rutasAsociados } from './modulos/asociados/asociados.rutas.js';
+import { rutasCaja } from './modulos/caja/caja.rutas.js';
 
 export const crearApp = () => {
   const app = express();
@@ -15,6 +17,7 @@ export const crearApp = () => {
   );
   app.use(express.json());
   app.use(cookieParser());
+  
 
   app.get('/api/salud', (_req, res) => {
     res.json({
@@ -25,7 +28,10 @@ export const crearApp = () => {
   });
 
   app.use('/api/auth', rutasAuth);
+  app.use('/api/asociados', rutasAsociados);
+  app.use('/api/caja', rutasCaja);
 
+  
   // Debe ir al final, después de todas las rutas
   app.use(manejadorDeErrores);
 

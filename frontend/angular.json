@@ -26,13 +26,8 @@
               }
             ],
             "styles": ["projects/portal/src/styles.css"],
-            "server": "projects/portal/src/main.server.ts",
-            "outputMode": "server",
             "security": {
               "allowedHosts": []
-            },
-            "ssr": {
-              "entry": "projects/portal/src/server.ts"
             }
           },
           "configurations": {
@@ -94,14 +89,12 @@
                 "input": "projects/backoffice/public"
               }
             ],
-            "styles": ["projects/backoffice/src/styles.css"],
-            "server": "projects/backoffice/src/main.server.ts",
-            "outputMode": "server",
+            "styles": [
+              "projects/backoffice/src/material-theme.scss",
+              "projects/backoffice/src/styles.css"
+            ],
             "security": {
               "allowedHosts": []
-            },
-            "ssr": {
-              "entry": "projects/backoffice/src/server.ts"
             }
           },
           "configurations": {

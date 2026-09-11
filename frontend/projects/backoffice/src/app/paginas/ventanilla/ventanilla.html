@@ -1,0 +1,220 @@
+<div class="min-h-screen bg-slate-50">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-semibold text-slate-800">Ventanilla</h1>
+        <p class="text-sm text-slate-500">{{ nombre() }}</p>
+      </div>
+      <div class="flex items-center gap-4">
+        @if (horario(); as h) {
+          <span
+            class="text-xs px-2.5 py-1 rounded-full"
+            [class]="h.abierta ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+          >
+            {{ h.mensaje }}
+          </span>
+        }
+        <button mat-button (click)="salir()">Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+
+    @if (!hayCaja()) {
+
+      <mat-card class="max-w-md mx-auto mt-8">
+        <mat-card-header>
+          <mat-card-title>Abrir caja</mat-card-title>
+          <mat-card-subtitle>Debe abrir caja para operar en ventanilla</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="pt-4">
+          <form [formGroup]="formApertura">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Saldo inicial en efectivo</mat-label>
+              <input matInput type="number" formControlName="saldoInicial" />
+              <span matTextPrefix>$&nbsp;</span>
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-flat-button [disabled]="procesando()" (click)="abrirCaja()">
+            Abrir caja
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+    } @else {
+
+      <div class="grid gap-6 lg:grid-cols-3">
+
+        <div class="lg:col-span-2 space-y-6">
+
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Buscar asociado</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="pt-4">
+              <form [formGroup]="formBusqueda" (ngSubmit)="buscar()" class="flex gap-3">
+                <mat-form-field appearance="outline" class="flex-1">
+                  <mat-label>Documento, nombre o número de asociado</mat-label>
+                  <input matInput formControlName="texto" />
+                </mat-form-field>
+                <button mat-flat-button type="submit" class="h-14">Buscar</button>
+              </form>
+
+              @if (resultados().length > 0) {
+                <div class="border border-slate-200 rounded-md divide-y divide-slate-100">
+                  @for (a of resultados(); track a.id) {
+                    <button
+                      class="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors"
+                      (click)="seleccionar(a)"
+                    >
+                      <p class="font-medium text-slate-800">
+                        {{ a.persona.nombres }} {{ a.persona.apellidos }}
+                      </p>
+                      <p class="text-sm text-slate-500">
+                        {{ a.persona.numeroDocumento }} · {{ a.numeroAsociado }} ·
+                        {{ a.sucursal.nombre }}
+                      </p>
+                    </button>
+                  }
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          @if (seleccionado(); as p) {
+
+            <mat-card>
+              <mat-card-header>
+                <mat-card-title>
+                  {{ p.persona.nombres }} {{ p.persona.apellidos }}
+                </mat-card-title>
+                <mat-card-subtitle>
+                  {{ p.numeroAsociado }} · {{ p.persona.numeroDocumento }} ·
+                  {{ p.sucursal.nombre }}
+                </mat-card-subtitle>
+              </mat-card-header>
+
+              <mat-card-content class="pt-4">
+
+                <div class="grid gap-3 sm:grid-cols-2 mb-6">
+                  @for (cuenta of p.saldos; track cuenta.cuentaId) {
+                    <div class="border border-slate-200 rounded-md p-4">
+                      <p class="text-sm text-slate-500">{{ nombreTipo(cuenta.tipo) }}</p>
+                      <p class="text-xl font-semibold text-slate-800">
+                        {{ formatear(cuenta.saldo) }}
+                      </p>
+                      <p class="text-xs text-slate-400 mt-1">
+                        {{ cuenta.numero }} · {{ cuenta.estado }}
+                      </p>
+                    </div>
+                  }
+                </div>
+
+                <form [formGroup]="formOperacion" class="border-t border-slate-100 pt-5">
+                  <p class="text-sm font-medium text-slate-600 mb-3">Operación</p>
+
+                  <div class="flex gap-3">
+                    <mat-form-field appearance="outline" class="flex-1">
+                      <mat-label>Cuenta</mat-label>
+                      <select matNativeControl formControlName="cuentaId">
+                        @for (cuenta of p.saldos; track cuenta.cuentaId) {
+                          <option [value]="cuenta.cuentaId">
+                            {{ nombreTipo(cuenta.tipo) }} — {{ cuenta.numero }}
+                          </option>
+                        }
+                      </select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="flex-1">
+                      <mat-label>Monto</mat-label>
+                      <input matInput type="number" formControlName="monto" />
+                      <span matTextPrefix>$&nbsp;</span>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="flex gap-3 mt-2">
+                    <button
+                      mat-flat-button
+                      type="button"
+                      [disabled]="procesando()"
+                      (click)="depositar()"
+                    >
+                      Depositar
+                    </button>
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      [disabled]="procesando()"
+                      (click)="retirar()"
+                    >
+                      Retirar
+                    </button>
+                    <button mat-button type="button" (click)="limpiar()">
+                      Limpiar
+                    </button>
+                  </div>
+                </form>
+
+              </mat-card-content>
+            </mat-card>
+          }
+
+        </div>
+
+        <div class="space-y-6">
+
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Caja abierta</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="pt-4 text-sm space-y-2">
+              @if (caja(); as c) {
+                <div class="flex justify-between">
+                  <span class="text-slate-500">Apertura</span>
+                  <span class="text-slate-800">
+                    {{ c.fechaApertura | date: 'short' }}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500">Saldo inicial</span>
+                  <span class="text-slate-800">{{ formatear(c.saldoInicial) }}</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>Cerrar caja</mat-card-title>
+              <mat-card-subtitle>Cuente el efectivo y regístrelo</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="pt-4">
+              <form [formGroup]="formCierre">
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Efectivo contado</mat-label>
+                  <input matInput type="number" formControlName="saldoContado" />
+                  <span matTextPrefix>$&nbsp;</span>
+                </mat-form-field>
+              </form>
+            </mat-card-content>
+            <mat-card-actions>
+              <button
+                mat-stroked-button
+                [disabled]="procesando()"
+                (click)="cerrarCaja()"
+              >
+                Cerrar caja y arquear
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
+        </div>
+      </div>
+    }
+
+  </main>
+</div>

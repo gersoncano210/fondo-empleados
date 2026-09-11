@@ -1,0 +1,22 @@
+<div class="min-h-screen bg-slate-50 p-8">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-xl font-semibold text-slate-800 mb-1">Backoffice</h1>
+    <p class="text-slate-500 mb-8">{{ nombre() }}</p>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <a
+        routerLink="/ventanilla"
+        class="block bg-white border border-slate-200 rounded-lg p-6 hover:border-slate-400 transition-colors"
+      >
+        <p class="font-medium text-slate-800">Ventanilla</p>
+        <p class="text-sm text-slate-500 mt-1">Depósitos, retiros y cierre de caja</p>
+      </a>
+    </div>
+
+    @if (usuario(); as u) {
+      <div class="mt-8 text-sm text-slate-400">
+        Roles: {{ u.roles.join(', ') }} · {{ u.permisos.length }} permisos
+      </div>
+    }
+  </div>
+</div>
